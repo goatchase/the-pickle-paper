@@ -973,7 +973,7 @@ footer .support-link:hover{text-decoration:underline}
       const groupStats=(label,group)=>({
         label,
         players:group.length,
-        averageScore:group.reduce((sum,row)=>sum+row.scoreTotal,0)/Math.max(1,group.reduce((sum,row)=>sum+row.weekCount,0)),
+        averageScore:group.reduce((sum,row)=>sum+row.scoreTotal,0)/Math.max(1,group.reduce((sum,row)=>sum+(row.scoredGameCount||0),0)),
         averageRank:group.reduce((sum,row)=>sum+row.rankTotal,0)/Math.max(1,group.reduce((sum,row)=>sum+row.rankCount,0)),
         weeklyWins:group.reduce((sum,row)=>sum+(row.weeklyWins||0),0),
         teamCorrect:group.reduce((sum,row)=>sum+row.teamCorrect,0),
@@ -985,7 +985,7 @@ footer .support-link:hover{text-decoration:underline}
       const top10=ordered.slice(0,Math.max(1,Math.ceil(ordered.length*.1)));
       const groups=[groupStats("Community",ordered),groupStats("Top 25%",top25),groupStats("Top 10%",top10)];
       const scoreValues=ordered.map(row=>Number(row.averageScore)).filter(Number.isFinite),vegasValues=ordered.map(row=>row.vegasTotal?row.vegasCorrect/row.vegasTotal*100:NaN).filter(Number.isFinite),scoreMin=Math.min(...scoreValues),scoreMax=Math.max(...scoreValues),vegasMin=Math.min(...vegasValues),vegasMax=Math.max(...vegasValues);
-      target.innerHTML=`<table class="season-table"><thead><tr><th class="season-rank">RANK</th><th class="season-name">NAME</th><th>AVG SCORE</th><th>AVG RANK</th><th>WEEKLY WINS</th><th>CORRECT TEAM</th><th>CORRECT VEGAS</th></tr></thead><tbody>${groups.map(group=>`<tr class="season-group"><td class="season-rank">—</td><td class="season-name">${group.label}<small>${group.players} PLAYER${group.players===1?"":"S"}</small></td><td class="season-number">${group.averageScore.toFixed(1)}</td><td class="season-number">${group.averageRank.toFixed(1)}</td><td class="season-number">${group.weeklyWins}</td><td class="season-number">${seasonPercent(group.teamCorrect,group.teamTotal)}</td><td class="season-number">${seasonPercent(group.vegasCorrect,group.vegasTotal)}</td></tr>`).join("")}<tr class="season-divider"><td colspan="7">PLAYERS</td></tr>${ordered.map(row=>{const vegasRate=row.vegasTotal?row.vegasCorrect/row.vegasTotal*100:NaN;return`<tr class="${row.userId===currentUser?.uid?"season-you":""}"><td class="season-rank">${row.seasonRank}</td><td class="season-name">${usernameWithNameHTML(row.username,row.name)}</td><td class="season-number" style="${seasonHeatStyle(row.averageScore,scoreMin,scoreMax,false)}">${row.averageScore.toFixed(1)}</td><td class="season-number">${row.averageRank.toFixed(1)}</td><td class="season-number">${row.weeklyWins||0}</td><td class="season-number">${seasonPercent(row.teamCorrect,row.teamTotal)}</td><td class="season-number" style="${seasonHeatStyle(vegasRate,vegasMin,vegasMax,true)}">${seasonPercent(row.vegasCorrect,row.vegasTotal)}</td></tr>`}).join("")}</tbody></table>`;
+      target.innerHTML=`<table class="season-table"><thead><tr><th class="season-rank">RANK</th><th class="season-name">NAME</th><th>AVG SCORE PER GAME</th><th>AVG RANK</th><th>WEEKLY WINS</th><th>CORRECT TEAM</th><th>CORRECT VEGAS</th></tr></thead><tbody>${groups.map(group=>`<tr class="season-group"><td class="season-rank">—</td><td class="season-name">${group.label}<small>${group.players} PLAYER${group.players===1?"":"S"}</small></td><td class="season-number">${group.averageScore.toFixed(1)}</td><td class="season-number">${group.averageRank.toFixed(1)}</td><td class="season-number">${group.weeklyWins}</td><td class="season-number">${seasonPercent(group.teamCorrect,group.teamTotal)}</td><td class="season-number">${seasonPercent(group.vegasCorrect,group.vegasTotal)}</td></tr>`).join("")}<tr class="season-divider"><td colspan="7">PLAYERS</td></tr>${ordered.map(row=>{const vegasRate=row.vegasTotal?row.vegasCorrect/row.vegasTotal*100:NaN;return`<tr class="${row.userId===currentUser?.uid?"season-you":""}"><td class="season-rank">${row.seasonRank}</td><td class="season-name">${usernameWithNameHTML(row.username,row.name)}</td><td class="season-number" style="${seasonHeatStyle(row.averageScore,scoreMin,scoreMax,false)}">${row.averageScore.toFixed(1)}</td><td class="season-number">${row.averageRank.toFixed(1)}</td><td class="season-number">${row.weeklyWins||0}</td><td class="season-number">${seasonPercent(row.teamCorrect,row.teamTotal)}</td><td class="season-number" style="${seasonHeatStyle(vegasRate,vegasMin,vegasMax,true)}">${seasonPercent(row.vegasCorrect,row.vegasTotal)}</td></tr>`}).join("")}</tbody></table>`;
     }
     function historicalSeasonRows(){
       const byPlayer=new Map();
@@ -993,8 +993,9 @@ footer .support-link:hover{text-decoration:underline}
         const winner=historicalCuts(record)[3].advancedPlayers[0]?.n.toUpperCase();
         record.players.forEach(player=>{
           const key=player.n.toUpperCase();
-          const row=byPlayer.get(key)||{userId:`historical-${key}`,username:player.n,scoreTotal:0,weekCount:0,rankTotal:0,rankCount:0,weeklyWins:0,teamCorrect:0,teamTotal:0,vegasCorrect:0,vegasTotal:0};
+          const row=byPlayer.get(key)||{userId:`historical-${key}`,username:player.n,scoreTotal:0,scoredGameCount:0,weekCount:0,rankTotal:0,rankCount:0,weeklyWins:0,teamCorrect:0,teamTotal:0,vegasCorrect:0,vegasTotal:0};
           row.scoreTotal+=player.s;
+          row.scoredGameCount+=record.actual.length;
           row.weekCount++;
           row.rankTotal+=player.r;
           row.rankCount++;
@@ -1004,7 +1005,7 @@ footer .support-link:hover{text-decoration:underline}
           byPlayer.set(key,row);
         });
       });
-      return[...byPlayer.values()].map(row=>({...row,averageScore:row.scoreTotal/row.weekCount,averageRank:row.rankTotal/row.rankCount}));
+      return[...byPlayer.values()].map(row=>({...row,averageScore:row.scoreTotal/Math.max(1,row.scoredGameCount),averageRank:row.rankTotal/row.rankCount}));
     }
     function historicalPickPoints(pick,actual){const correct=pick[0]===actual[0],signed=correct?actual[1]:-actual[1];return Math.abs(pick[1]-signed)}
     function renderHistoricalWeek(value){const weekKey=String(Number(value)||1),record=historical2025.weeks[weekKey],target=document.getElementById("historicalWeekTable");target.innerHTML=historicalMatrixHTML(record)}
@@ -1044,7 +1045,7 @@ footer .support-link:hover{text-decoration:underline}
           const winnerId=leaders.map(item=>({id:item.id,data:item.data()})).filter(item=>Number.isFinite(Number(item.data.phaseStats?.PRIMETIME?.points))).sort((a,b)=>Number(a.data.phaseStats.PRIMETIME.points)-Number(b.data.phaseStats.PRIMETIME.points)||(a.data.username||a.id).localeCompare(b.data.username||b.id))[0]?.id;
           leaders.forEach((item,index)=>{
             const data=item.data(),score=Number(data.score),rank=Number(data.rank)||index+1;
-            const row=byUser.get(item.id)||{userId:item.id,username:data.username||item.id,name:data.name||"",scoreTotal:0,weekCount:0,rankTotal:0,rankCount:0,weeklyWins:0,teamCorrect:0,teamTotal:0,vegasCorrect:0,vegasTotal:0};
+            const row=byUser.get(item.id)||{userId:item.id,username:data.username||item.id,name:data.name||"",scoreTotal:0,scoredGameCount:0,weekCount:0,rankTotal:0,rankCount:0,weeklyWins:0,teamCorrect:0,teamTotal:0,vegasCorrect:0,vegasTotal:0};
             row.username=data.username||row.username;
             row.name=data.name||row.name||"";
             if(Number.isFinite(score)){row.scoreTotal+=score;row.weekCount++}
@@ -1055,7 +1056,9 @@ footer .support-link:hover{text-decoration:underline}
               const game=weekGames.get(String(gameId));
               if(!game)return;
               const away=game.awayTeam||"",home=game.homeTeam||"",awayScore=Number(game.awayScore),homeScore=Number(game.homeScore);
-              if(!Number.isFinite(awayScore)||!Number.isFinite(homeScore)||awayScore===homeScore)return;
+              if(!Number.isFinite(awayScore)||!Number.isFinite(homeScore))return;
+              row.scoredGameCount++;
+              if(awayScore===homeScore)return;
               const actualWinner=awayScore>homeScore?away:home,selected=pick?.team||pick?.selectedWinner;
               if(!sameTeam(selected,away)&&!sameTeam(selected,home))return;
               row.teamTotal++;
@@ -1071,7 +1074,7 @@ footer .support-link:hover{text-decoration:underline}
             byUser.set(item.id,row);
           });
         });
-        const rows=[...byUser.values()].filter(row=>row.weekCount).map(row=>({...row,averageScore:row.scoreTotal/row.weekCount,averageRank:row.rankTotal/Math.max(1,row.rankCount)}));
+        const rows=[...byUser.values()].filter(row=>row.weekCount).map(row=>({...row,averageScore:row.scoreTotal/Math.max(1,row.scoredGameCount),averageRank:row.rankTotal/Math.max(1,row.rankCount)}));
         renderSeasonTables(rows);
       }catch(error){
         console.warn("Could not load season results",error);
@@ -1096,7 +1099,7 @@ footer .support-link:hover{text-decoration:underline}
       const allGamesFinal=games.length>0&&games.every(g=>String(g.status||"").toLowerCase()==="final");
       const entryProfiles=new Map(entryRows.map(entry=>[entry.userId,{username:entry.username,name:entry.name||""}])),scoredRows=leaderboardRows.map(row=>{const profile=entryProfiles.get(row.userId);return{...row,username:profile?.username||row.username||"Player",name:profile?.name||row.name||""}}),scoredIds=new Set(scoredRows.map(row=>row.userId)),lockedRows=savedLockedRows.filter(row=>!scoredIds.has(row.userId)),visibleIds=new Set([...scoredIds,...lockedRows.map(row=>row.userId)]),visibleRows=scoredRows.concat(lockedRows,entryRows.filter(entry=>!visibleIds.has(entry.userId)).map(entry=>({userId:entry.userId,username:entry.username||"Player",name:entry.name||"",score:"—",perfectPicks:"—",picks:{},phaseStats:{},rank:Number.MAX_SAFE_INTEGER,eliminated:false}))).sort((a,b)=>Number(Boolean(a.eliminated))-Number(Boolean(b.eliminated))||(Number(a.rank)||Number.MAX_SAFE_INTEGER)-(Number(b.rank)||Number.MAX_SAFE_INTEGER)||String(a.username).localeCompare(String(b.username)));
       if(scoreView==="current"){
-        const phaseIndex=phases.findIndex(phase=>phase.key===active),priorPhases=phases.slice(0,phaseIndex),roundGames=games.filter(game=>game.phase===active),roundRows=visibleRows.filter(row=>!priorPhases.some(phase=>row.phaseStats?.[phase.key]?.advanced===false)),roundScore=row=>roundGames.reduce((sum,game)=>{const points=pickPointsForGame(row.picks?.[String(game.id)],game);return sum+(Number.isFinite(points)?points:0)},0);
+        const phaseIndex=phases.findIndex(phase=>phase.key===active),priorPhases=phases.slice(0,phaseIndex),roundGames=games.filter(game=>game.phase===active),scoreGames=active==="PRIMETIME"?roundGames:games.filter(game=>phases.findIndex(phase=>phase.key===game.phase)<=phaseIndex),roundRows=visibleRows.filter(row=>!priorPhases.some(phase=>row.phaseStats?.[phase.key]?.advanced===false)),roundScore=row=>{const saved=Number(row.phaseStats?.[active]?.points);if(Number.isFinite(saved))return saved;return scoreGames.reduce((sum,game)=>{const points=pickPointsForGame(row.picks?.[String(game.id)],game);return sum+(Number.isFinite(points)?points:0)},0)};
         roundRows.sort((a,b)=>roundScore(a)-roundScore(b)||String(a.username).localeCompare(String(b.username)));
         const currentPlayerRow=(row,index)=>`<tr><td class="fixed-rank">${index+1}</td><td class="fixed-name">${usernameWithNameHTML(row.username||"Player",row.name)}</td><td class="fixed-score">${roundScore(row)}</td>${roundGames.map(game=>{const pick=row.picks?.[String(game.id)];if(!pick)return'<td class="game-col">-</td>';const points=pickPointsForGame(pick,game),color=teamColorFor(game,pick.team),bubble=points==null?'<span class="pick-points-bubble">—</span>':`<span class="pick-points-bubble" style="${pickPointsBubbleStyle(points,game)}" title="${points} points">${points}</span>`;return`<td class="game-col" style="background:${color};color:${readableTextColor(color)}"><div class="leader-pick-cell"><span class="leader-pick-choice"><span class="leader-pick-team">${teamShortFor(game,pick.team)}</span><span class="leader-pick-margin">${pick.margin}</span></span>${bubble}</div></td>`}).join("")}</tr>`;
         const advanced=roundRows.filter(row=>row.phaseStats?.[active]?.advanced===true),eliminated=roundRows.filter(row=>row.phaseStats?.[active]?.advanced===false),pending=roundRows.filter(row=>row.phaseStats?.[active]?.advanced==null),orderedRows=advanced.concat(pending,eliminated);
@@ -1285,11 +1288,11 @@ footer .support-link:hover{text-decoration:underline}
     function moveSponsorLogo(){const logo=document.querySelector("footer .footer-logo"),ad=document.querySelector("#picksView .ad");if(!logo||!ad)return;logo.className="ad-logo";ad.replaceChildren(logo)}
     async function init(){moveSponsorLogo();wireSupportLink();wireAdminTeamColorDefaults();installScoreViewControls();document.querySelectorAll("#weekSelect,#leaderWeekSelect,#gamesWeekSelect,#adminWeek,#adminDefaultWeek").forEach(select=>select.innerHTML=options());document.getElementById("leaders").innerHTML="";renderAdmin();const restored=savedUiState();if(phases.some(phase=>phase.key===restored.active))active=restored.active;if(Number(restored.leaderBrowseYear))leaderBrowseYear=Number(restored.leaderBrowseYear);if(Number(restored.gamesBrowseYear))gamesBrowseYear=Number(restored.gamesBrowseYear);if(Number(restored.seasonViewYear))seasonViewYear=Number(restored.seasonViewYear);document.getElementById("leaderYearSelect").value=String(leaderBrowseYear);document.getElementById("gamesYearSelect").value=String(gamesBrowseYear);document.getElementById("seasonViewYear").value=String(seasonViewYear);let openingWeek=1;const [currentWeeks]=await Promise.all([getDocs(query(collection(db,"weeks"),where("isCurrent","==",true))).catch(error=>{console.warn("Could not determine current week",error);return null}),loadTeamColorReferences()]);if(currentWeeks&&!currentWeeks.empty)openingWeek=Number(currentWeeks.docs[0].id)||1;defaultSiteWeek=openingWeek;if(Number(restored.week)>=1&&Number(restored.week)<=15)openingWeek=Number(restored.week);await setWeek(openingWeek);const restoredView=["picks","leaderboard","games","season","admin"].includes(restored.view)?restored.view:"picks";if(restoredView!=="admin")showView(restoredView,false);renderPaths();renderGames();renderLiveScores();uiStateReady=true;showOnboardingIfNeeded()}
     const initialLoadReady=init();
-    onAuthStateChanged(auth,async user=>{await initialLoadReady;currentUser=user;currentProfile=null;isAdmin=false;if(user){const profile=await getDoc(doc(db,"users",user.uid)).catch(()=>null);if(profile?.exists())currentProfile=profile.data();const profileRole=String(currentProfile?.role||"").trim().toLowerCase();isAdmin=profileRole==="admin";updateUserIdentityUI();await loadUserPicks()}else{picks={};submitted=false;savedLockedRows=[];document.getElementById("userButton").textContent="SIGN IN";document.getElementById("userNamePopover").classList.add("hidden");try{localStorage.removeItem("cfbPickemIdentity")}catch(error){}renderGames()}const adminButton=document.getElementById("adminNav");adminButton.classList.toggle("hidden",!isAdmin);adminButton.style.display=isAdmin?"inline-block":"none";let restoredView=savedUiState().view||"picks";if(restoredView==="admin"&&!isAdmin)restoredView="picks";showView(restoredView,false);await Promise.all([loadLiveLeaderboard(),isAdmin?loadAdminUsers():Promise.resolve()])});
+    onAuthStateChanged(auth,async user=>{await initialLoadReady;currentUser=user;currentProfile=null;isAdmin=false;if(user){const profile=await getDoc(doc(db,"users",user.uid)).catch(()=>null);if(profile?.exists())currentProfile=profile.data();const profileRole=String(currentProfile?.role||"").trim().toLowerCase();isAdmin=profileRole==="admin";updateUserIdentityUI();await loadUserPicks()}else{picks={};submitted=false;savedLockedRows=[];document.getElementById("userButton").textContent="SIGN IN";document.getElementById("userNamePopover").classList.add("hidden");try{localStorage.removeItem("cfbPickemIdentity")}catch(error){}renderGames()}const adminButton=document.getElementById("adminNav");adminButton.classList.toggle("hidden",!isAdmin);adminButton.style.display=isAdmin?"inline-block":"none";let restoredView=savedUiState().view||"picks";if(restoredView==="admin"&&!isAdmin)restoredView="picks";showView(restoredView,false);await Promise.all([loadLiveLeaderboard(),isAdmin?loadAdminUsers():Promise.resolve()]);if(isAdmin&&Date.now()-lastAdminScoreSyncAt>=55000)syncScoresFromEspn({silent:true})});
     Object.assign(window,{setWeek,setDefaultSiteWeek,setScoreView,setPhase,choose,margin,setMargin,nextPhase,showView,setBrowseYear,changeBrowseWeek,setSeasonViewYear,renderHistoricalWeek,toggleModal,toggleSupportModal,submitSupport,switchAuthMode,submitAuth,accountAction,openProfile,closeProfile,profileSignOut,saveUsername,saveActualScore,syncScoresFromEspn,saveAdminCuts,resetAdminCuts,addAdminGame,removeAdminGame,publishWeekConfig,openTeamColorReferences,closeTeamColorReferences,filterTeamColorReferences,addTeamColorReference,saveTeamColorReferences,closeSiteDialog,showOnboarding,closeOnboarding,changeOnboardingPage});
     installWeekNavigation();
     setInterval(updateLockCountdown,1000);
-    setInterval(()=>{const adminOpen=!document.getElementById("adminView")?.classList.contains("hidden");if(adminOpen&&isAdmin&&Date.now()-lastAdminScoreSyncAt>=55000)syncScoresFromEspn({silent:true})},60000);
+    setInterval(()=>{if(isAdmin&&Date.now()-lastAdminScoreSyncAt>=55000)syncScoresFromEspn({silent:true})},60000);
   </script>
 </body>
 </html>
