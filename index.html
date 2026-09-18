@@ -939,13 +939,16 @@ footer .support-link:hover{text-decoration:underline}
       try{
         const completeGames=gameList.filter(game=>pickIsComplete(game)&&!gameLocked(game)),batch=writeBatch(db);
         for(const game of completeGames){const pick=picks[game.id],payload={userId:currentUser.uid,gameId:String(game.id),selectedWinner:pick.team,predictedMargin:Number(pick.margin),submittedAt:serverTimestamp(),updatedAt:serverTimestamp()};batch.set(doc(db,"weeks",String(week),"picks",`${currentUser.uid}_${game.id}`),payload,{merge:true})}
-        if(completeGames.length)await batch.commit();
-        loadedUserPickDocIds=[...new Set([...loadedUserPickDocIds,...completeGames.map(game=>`${currentUser.uid}_${game.id}`)])];
-        if(missedLockedGames().length){await removeCurrentUserWeekEntry();siteAlert("Your Week entry was removed because a game reached kickoff without a submitted pick.","Entry removed");return false}
-        const savedPickCount=loadedUserPickDocIds.filter(id=>games.some(game=>id===savedPickDocumentId(game))).length,entryPayload={username:currentProfile?.username||currentUser.displayName||"Player",name:String(currentProfile?.name||"").trim(),updatedAt:serverTimestamp(),savedPickCount};
+        const nextPickDocIds=[...new Set([...loadedUserPickDocIds,...completeGames.map(game=>`${currentUser.uid}_${game.id}`)])],savedPickCount=nextPickDocIds.filter(id=>games.some(game=>id===savedPickDocumentId(game))).length,entryPayload={username:currentProfile?.username||currentUser.displayName||"Player",name:String(currentProfile?.name||"").trim(),updatedAt:serverTimestamp(),savedPickCount};
         if(finalSubmission){entryPayload.submittedAt=serverTimestamp();entryPayload.pickCount=games.length}
-        await setDoc(doc(db,"weeks",String(week),"entries",currentUser.uid),entryPayload,{merge:true});
-        await Promise.all([loadEntryCount(),loadEntryRows()]);
+        batch.set(doc(db,"weeks",String(week),"entries",currentUser.uid),entryPayload,{merge:true});
+        await batch.commit();
+        loadedUserPickDocIds=nextPickDocIds;
+        const localEntry={userId:currentUser.uid,...entryPayload,updatedAt:new Date()},existingIndex=entryRows.findIndex(entry=>entry.userId===currentUser.uid);
+        if(existingIndex>=0)entryRows[existingIndex]={...entryRows[existingIndex],...localEntry};else entryRows.push(localEntry);
+        entryRows.sort((a,b)=>String(a.username||"").localeCompare(String(b.username||"")));
+        entryCount=Math.max(entryCount,entryRows.length);renderEntryCount();renderPickMatrix();renderPaths();
+        Promise.all([loadEntryCount(),loadEntryRows()]).catch(error=>console.warn("Could not refresh entries after saving",error));
         return true
       }catch(error){await siteAlert(friendlyError(error),"Picks not saved");return false}
     }
