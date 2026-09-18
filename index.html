@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>pp</title>
+  <title>PP</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cellipse%20cx='32'%20cy='32'%20rx='27'%20ry='16'%20transform='rotate(-32%2032%2032)'%20fill='%238B4513'%20stroke='%23174A7E'%20stroke-width='3'/%3E%3Cpath%20d='M22%2025l20%2014M27%2023l-4%206M32%2027l-4%206M37%2031l-4%206M42%2035l-4%206'%20fill='none'%20stroke='white'%20stroke-width='3'%20stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -807,9 +807,9 @@ footer .support-link:hover{text-decoration:underline}
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    import { initializeFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, getCountFromServer, writeBatch, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, getCountFromServer, writeBatch, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
     const firebaseConfig={apiKey:"AIzaSyBu482T557sHbU1GoBtnqjJggTq0ZQbewY",authDomain:"mostly-82ef3.firebaseapp.com",projectId:"mostly-82ef3",storageBucket:"mostly-82ef3.firebasestorage.app",messagingSenderId:"138203800255",appId:"1:138203800255:web:d2e7584a4652f42cd51c0a",measurementId:"G-G6TLLBLXXR"};
-    const firebaseApp=initializeApp(firebaseConfig),auth=getAuth(firebaseApp),db=initializeFirestore(firebaseApp,{experimentalForceLongPolling:true,useFetchStreams:false}),authPersistenceReady=setPersistence(auth,browserLocalPersistence).catch(error=>{console.warn("Persistent sign-in is unavailable in this browser",error)});
+    const firebaseApp=initializeApp(firebaseConfig),auth=getAuth(firebaseApp),db=getFirestore(firebaseApp),authPersistenceReady=setPersistence(auth,browserLocalPersistence).catch(error=>{console.warn("Persistent sign-in is unavailable in this browser",error)});
     analyticsSupported().then(ok=>{if(ok)getAnalytics(firebaseApp)}).catch(()=>{});
     const phases=[{key:"EARLY",label:"Weekday"},{key:"MORNING",label:"Saturday Morning"},{key:"AFTERNOON",label:"Saturday Afternoon"},{key:"PRIMETIME",label:"Saturday Night"}];
     function defaultTeamShort(name){const special={"Boise State":"BOI","Notre Dame":"ND","Ole Miss":"MISS","Ohio State":"OSU","Texas A&M":"TAM","Penn State":"PSU","Michigan State":"MSU","Georgia Tech":"GT","Fresno State":"FRES"};return special[name]||String(name||"").replace(/[^A-Za-z0-9]/g,"").slice(0,3).toUpperCase()}
